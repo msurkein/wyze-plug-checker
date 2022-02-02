@@ -1,17 +1,16 @@
 import base64
 import json
+import os
 from functools import cache
 
 import boto3
 from botocore.exceptions import ClientError
-from wyze_sdk import Client
+from twilio.rest import Client as TwilioClient
+from wyze_sdk import Client as WyzeClient
 
 
 @cache
-def get_secret():
-    secret_name = "arn:aws:secretsmanager:us-east-1:674684605483:secret:prod/wyze-xfnVtg"
-    region_name = "us-east-1"
-
+def get_secret(secret_name, region_name):
     # Create a Secrets Manager client
     session = boto3.session.Session()
     client = session.client(
@@ -58,7 +57,25 @@ def get_secret():
 
 
 def handler(e, ctx):
-    secret_data = get_secret()
-    client = Client(email=secret_data['WYZE_USERNAME'], password=secret_data['WYZE_PASSWORD'])
-    for dev in client.plugs.list():
-        print(f"{dev.nickname} = {dev.is_on} = {dev.is_online}")
+    device_nickname = os.environ["WYZE_DEVICE_NICKNAME"]
+    wyze_secret_name = os.environ["WYSZE_SECRET_NAME"]
+    region = os.getenv("AWS_REGION", "us-east-1")
+    wyze_secret = get_secret(wyze_secret_name, region)
+    wyze_client = WyzeClient(email=wyze_secret['WYZE_USERNAME'], password=wyze_secret['WYZE_PASSWORD'])
+    for dev in wyze_client.plugs.list():
+        if dev.nickname == device_nickname:
+            if not dev.is_online:
+                sms_body = os.getenv("TWILIO_BODY", "Your device is not running.")
+                twilio_secret_name = os.environ["TWILIO_SECRET_NAME"]
+                twilio_data = get_secret(twilio_secret_name, region)
+                account_sid = twilio_data["TWILIO_USERNAME"]
+                auth_token = twilio_data["TWILIO_PASSWORD"]
+                service_sid = twilio_data["TWILIO_SID"]
+                target = twilio_data["TWILIO_TARGET"]
+                twilio_client = TwilioClient(account_sid, auth_token)
+                twilio_client.messages.create(
+                    messaging_service_sid=service_sid,
+                    body=sms_body,
+                    to=target
+                )
+                print("Refrigerator is off!")
