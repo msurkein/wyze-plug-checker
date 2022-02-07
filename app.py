@@ -80,3 +80,6 @@ def handler(e, ctx):
                     to=target
                 )
                 print("Refrigerator is off!")
+
+if __name__ == "__main__":
+    handler("", "")
