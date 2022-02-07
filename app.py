@@ -27,6 +27,7 @@ def get_secret(secret_name, region_name):
             SecretId=secret_name
         )
     except ClientError as e:
+        print(e)
         if e.response['Error']['Code'] == 'DecryptionFailureException':
             # Secrets Manager can't decrypt the protected secret text using the provided KMS key.
             # Deal with the exception here, and/or rethrow at your discretion.
@@ -58,7 +59,7 @@ def get_secret(secret_name, region_name):
 
 def handler(e, ctx):
     device_nickname = os.environ["WYZE_DEVICE_NICKNAME"]
-    wyze_secret_name = os.environ["WYSZE_SECRET_NAME"]
+    wyze_secret_name = os.environ["WYZE_SECRET_NAME"]
     region = os.getenv("AWS_REGION", "us-east-1")
     wyze_secret = get_secret(wyze_secret_name, region)
     wyze_client = WyzeClient(email=wyze_secret['WYZE_USERNAME'], password=wyze_secret['WYZE_PASSWORD'])
