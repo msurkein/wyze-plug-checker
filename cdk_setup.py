@@ -1,4 +1,5 @@
 import os
+import shutil
 
 import aws_cdk.aws_ecr_assets as ecra
 import aws_cdk.aws_events as e
@@ -7,6 +8,13 @@ import aws_cdk.aws_lambda as lambda_
 import aws_cdk.aws_secretsmanager as sm
 from aws_cdk import App, Stack, Duration
 from constructs import Construct
+
+output_directory = "./cdk.out"
+
+if os.path.exists(output_directory):
+    for f in os.listdir(output_directory):
+        if os.path.isdir(f"{output_directory}/{f}") and f.startswith("asset."):
+            shutil.rmtree(f"{output_directory}/{f}")
 
 
 class RefrigeratorService(Construct):
@@ -34,6 +42,6 @@ class RefrigeratorService(Construct):
         r = e.Rule(stack, "Every15MinutesRefrigerator", schedule=e.Schedule.rate(Duration.minutes(15)), targets=[et.LambdaFunction(handler)])
 
 
-app = App(outdir="./cdk.out")
+app = App(outdir=output_directory)
 RefrigeratorService(app, "RefrigeratorCheckService")
 app.synth(validate_on_synthesis=True)
