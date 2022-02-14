@@ -52,7 +52,8 @@ def get_secret(secret_name, region_name):
         # Decrypts secret using the associated KMS key.
         # Depending on whether the secret is a string or binary, one of these fields will be populated.
         if 'SecretString' in get_secret_value_response:
-            return json.loads(get_secret_value_response['SecretString'])
+            res: dict = json.loads(get_secret_value_response['SecretString'])
+            return res
         else:
             return base64.b64decode(get_secret_value_response['SecretBinary'])
 
@@ -79,7 +80,6 @@ def handler(e, ctx):
                     body=sms_body,
                     to=target
                 )
-                print("Refrigerator is off!")
 
 if __name__ == "__main__":
     handler("", "")
