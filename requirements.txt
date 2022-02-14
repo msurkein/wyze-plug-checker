@@ -3,3 +3,4 @@ botocore~=1.21.55
 wyze_sdk~=1.2.3
 twilio~=7.5.1
 aws-cdk-lib
+constructs~=10.0.52
