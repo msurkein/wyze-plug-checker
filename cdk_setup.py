@@ -2,9 +2,11 @@ import os
 import shutil
 
 import aws_cdk.aws_ecr_assets as ecra
+import aws_cdk.aws_events as av
 import aws_cdk.aws_events as e
 import aws_cdk.aws_events_targets as et
 import aws_cdk.aws_lambda as lambda_
+import aws_cdk.aws_lambda_destinations as dest
 import aws_cdk.aws_secretsmanager as sm
 from aws_cdk import App, Stack, Duration, IgnoreMode
 from constructs import Construct
@@ -21,13 +23,17 @@ class RefrigeratorService(Construct):
     def __init__(self, scope: Construct, id: str):
         super().__init__(scope, id)
         stack = Stack(scope, "RefrigeratorCheckStack")
+        eb = av.EventBus(stack, "RefrigeratorBus")
+        d = dest.EventBridgeDestination(eb)
         code_img = ecra.DockerImageAsset(stack, "WyzeLambdaImage", directory=os.getcwd(), exclude=[".git", ".gitignore", "cdk_out*", "cdk*", ".idea*", "venv*", __file__.split("/").pop()], ignore_mode=IgnoreMode.GIT)
         handler = lambda_.DockerImageFunction(stack,
                                               "lambdaContainerFunction",
                                               code=lambda_.DockerImageCode.from_ecr(repository=code_img.repository, tag=code_img.asset_hash),
                                               function_name="RefrigeratorChecker",
                                               memory_size=128,
-                                              timeout=Duration.seconds(10)
+                                              timeout=Duration.seconds(10),
+                                              on_success=d,
+                                              on_failure=d
                                               )
         twilio_secret_name = 'prod/twilio'
         wyze_secret_name = 'prod/wyze'
