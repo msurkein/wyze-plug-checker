@@ -8,17 +8,19 @@ import boto3
 from botocore.exceptions import ClientError
 from wyze_sdk import Client as WyzeClient
 
+if os.getenv("AWS_REGION", "local") == "local":
+    session = boto3.Session(profile_name='surkein')
+else:
+    session = boto3.Session()
 
 @cache
 def get_event_client(region_name):
-    session = boto3.session.Session()
     event_client = session.client(service_name='events', region_name=region_name)
     return event_client
 
 
 @cache
 def get_secret_client(region_name):
-    session = boto3.session.Session()
     client = session.client(
         service_name='secretsmanager',
         region_name=region_name
@@ -72,11 +74,11 @@ def get_secret(secret_name, region_name):
 
 
 def handler(e, ctx):
-    device_nickname = os.environ["WYZE_DEVICE_NICKNAME"]
-    wyze_secret_name = os.environ["WYZE_SECRET_NAME"]
+    device_nickname = os.getenv("WYZE_DEVICE_NICKNAME", "Refrigerator")
+    wyze_secret_name = os.getenv("WYZE_SECRET_NAME", "prod/wyze")
     region = os.getenv("AWS_REGION", "us-east-1")
     wyze_secret = get_secret(wyze_secret_name, region)
-    wyze_client = WyzeClient(email=wyze_secret['WYZE_USERNAME'], password=wyze_secret['WYZE_PASSWORD'])
+    wyze_client = WyzeClient(email=wyze_secret['WYZE_USERNAME'], password=wyze_secret['WYZE_PASSWORD'], key_id=wyze_secret["WYZE_KEY_ID"], api_key=wyze_secret["WYZE_API_KEY"])
     for dev in wyze_client.plugs.list():
         if dev.nickname == device_nickname:
             if dev.is_online:
@@ -87,7 +89,7 @@ def handler(e, ctx):
             event = {
                 "Source": ctx.function_name,
                 "Resources": [],
-                "EventBusName": os.environ["EVENT_BUS_NAME"],
+                "EventBusName": os.getenv("EVENT_BUS_NAME", ""),
                 "DetailType": "{}_status".format(device_nickname),
                 "Detail": "{" + detail_string + "}"
             }

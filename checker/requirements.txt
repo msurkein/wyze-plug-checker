@@ -1,3 +1,3 @@
 boto3
 botocore
-wyze_sdk~=1.2.3
+wyze_sdk

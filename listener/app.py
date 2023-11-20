@@ -73,8 +73,10 @@ def get_secret(secret_name, region_name):
 
 def handler(e, ctx):
     device_nickname = os.environ["WYZE_DEVICE_NICKNAME"]
-    if e["DetailType"] == f"{device_nickname}_status":
-        if e[e["DetailType"]] == "off":
+    print(e)
+    if e["detail-type"] == f"{device_nickname}_status":
+        if e["detail"][e["detail-type"]] == "off":
+            print("Device is off, notifying...")
             sms_body = os.getenv("TWILIO_BODY", "Your device is not running.")
             twilio_secret_name = os.environ["TWILIO_SECRET_NAME"]
             region = os.getenv("AWS_REGION", "us-east-1")
@@ -89,6 +91,8 @@ def handler(e, ctx):
                 body=sms_body,
                 to=target
             )
+        else:
+            print("No need to notify")
 
 
 if __name__ == "__main__":

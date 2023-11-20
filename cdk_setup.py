@@ -36,8 +36,6 @@ class RefrigeratorService(Construct):
                                               )
         twilio_secret_name = 'prod/twilio'
         wyze_secret_name = 'prod/wyze'
-        handler.add_environment('TWILIO_BODY', 'Garage Fridge is not running.')
-        handler.add_environment('TWILIO_SECRET_NAME', twilio_secret_name)
         handler.add_environment('WYZE_SECRET_NAME', wyze_secret_name)
         handler.add_environment('WYZE_DEVICE_NICKNAME', 'Refrigerator')
         handler.add_environment('EVENT_BUS_NAME', eb.event_bus_name)
@@ -45,8 +43,22 @@ class RefrigeratorService(Construct):
         wyze_creds = sm.Secret.from_secret_name_v2(stack, "wyze_creds", wyze_secret_name)
         twilio_creds.grant_read(handler.role)
         wyze_creds.grant_read(handler.role)
+        listen_handler_img = ecra.DockerImageAsset(stack, "OffListenerImage", directory=os.getcwd() + "/listener", exclude=[".git", ".gitignore", "cdk_out*", "cdk*", ".idea*", "venv*", __file__.split("/").pop()], ignore_mode=IgnoreMode.GIT)
+        listen_handler = lambda_.DockerImageFunction(stack,
+                                                     "lambdaContainerFunctionListener",
+                                                     code=lambda_.DockerImageCode.from_ecr(repository=listen_handler_img.repository, tag=listen_handler_img.asset_hash),
+                                                     function_name="RefrigeratorCheckerListener",
+                                                     memory_size=128,
+                                                     timeout=Duration.seconds(10),
+                                                     on_success=d,
+                                                     on_failure=d
+                                                     )
+        listen_handler.add_environment('TWILIO_BODY', 'Garage Fridge is not running.')
+        listen_handler.add_environment('TWILIO_SECRET_NAME', twilio_secret_name)
+        listen_handler.add_environment('WYZE_SECRET_NAME', wyze_secret_name)
+        listen_handler.add_environment('WYZE_DEVICE_NICKNAME', 'Refrigerator')
         r = e.Rule(stack, "Every15MinutesRefrigerator", schedule=e.Schedule.rate(Duration.minutes(15)), targets=[et.LambdaFunction(handler)])
-        r = e.Rule(stack, "OffEventListener", event_pattern=e.EventPattern(detail_type="Refrigerator"), event_bus=eb, targets=[et.LambdaFunction(listen_handler)])
+        r2 = e.Rule(stack, "OffEventListener", event_pattern=e.EventPattern(detail_type=["Refrigerator_status"]), event_bus=eb, targets=[et.LambdaFunction(listen_handler)])
 
 
 app = App(outdir=output_directory)
