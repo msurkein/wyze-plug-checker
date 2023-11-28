@@ -75,7 +75,7 @@ def handler(e, ctx):
     device_nickname = os.environ["WYZE_DEVICE_NICKNAME"]
     print(e)
     if e["detail-type"] == f"{device_nickname}_status":
-        if e["detail"][e["detail-type"]] == "off":
+        if e["detail"][e["detail-type"]].upper() == "OFF":
             print("Device is off, notifying...")
             sms_body = os.getenv("TWILIO_BODY", "Your device is not running.")
             twilio_secret_name = os.environ["TWILIO_SECRET_NAME"]
